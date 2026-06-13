@@ -1,5 +1,7 @@
 import express from 'express';
 import Post from '../models/Post.js';
+import User from '../models/User.js';
+import Notification from '../models/Notification.js';
 import auth from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
 
@@ -73,6 +75,18 @@ router.put('/:id/like', auth, async (req, res) => {
 
     await post.save();
 
+    // Notify post author on like (not unlike, not self-like)
+    if (likeIndex === -1 && post.author.toString() !== req.user.id) {
+      const liker = await User.findById(req.user.id);
+      await Notification.create({
+        recipient: post.author,
+        sender: req.user.id,
+        type: 'like',
+        post: post._id,
+        message: `${liker.username} liked your post`,
+      });
+    }
+
     const updatedPost = await Post.findById(post._id)
       .populate('author', 'username avatar')
       .populate('comments.user', 'username avatar');
@@ -96,6 +110,19 @@ router.post('/:id/comment', auth, async (req, res) => {
 
     post.comments.push({ user: req.user.id, text: text.trim() });
     await post.save();
+
+    // Notify post author on comment (not self-comment)
+    if (post.author.toString() !== req.user.id) {
+      const commenter = await User.findById(req.user.id);
+      const snippet = text.trim().length > 50 ? text.trim().substring(0, 50) + '...' : text.trim();
+      await Notification.create({
+        recipient: post.author,
+        sender: req.user.id,
+        type: 'comment',
+        post: post._id,
+        message: `${commenter.username} commented: "${snippet}"`,
+      });
+    }
 
     const updatedPost = await Post.findById(post._id)
       .populate('author', 'username avatar')

@@ -1,6 +1,7 @@
 import express from 'express';
 import User from '../models/User.js';
 import Post from '../models/Post.js';
+import Notification from '../models/Notification.js';
 import auth from '../middleware/auth.js';
 
 const router = express.Router();
@@ -50,6 +51,16 @@ router.put('/:id/follow', auth, async (req, res) => {
 
     await currentUser.save();
     await userToFollow.save();
+
+    // Create notification on follow (not unfollow)
+    if (!isFollowing) {
+      await Notification.create({
+        recipient: req.params.id,
+        sender: req.user.id,
+        type: 'follow',
+        message: `${currentUser.username} started following you`,
+      });
+    }
 
     const postCount = await Post.countDocuments({ author: req.params.id });
 

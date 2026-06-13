@@ -1,14 +1,48 @@
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { Home, User, LogOut, Zap } from 'lucide-react';
+import { Home, User, LogOut, Zap, Bell } from 'lucide-react';
+import Notifications from './Notifications.jsx';
+import API from '../api';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [showNotifs, setShowNotifs] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const res = await API.get('/notifications/unread-count');
+      setUnreadCount(res.data.count);
+    } catch (err) {
+      // silently fail
+    }
+  };
 
   const handleLogout = () => {
     logout();
     navigate('/auth');
+  };
+
+  const toggleNotifs = () => {
+    setShowNotifs(!showNotifs);
+    if (!showNotifs) {
+      // Refresh count when opening
+      fetchUnreadCount();
+    }
+  };
+
+  const handleCloseNotifs = () => {
+    setShowNotifs(false);
+    // Refresh count after viewing
+    setTimeout(fetchUnreadCount, 500);
   };
 
   return (
@@ -27,6 +61,28 @@ export default function Navbar() {
           >
             <Home className="w-5 h-5" />
           </Link>
+
+          {/* Notifications bell */}
+          <div className="relative">
+            <button
+              onClick={toggleNotifs}
+              className={`p-2.5 rounded-xl transition-all ${
+                showNotifs
+                  ? 'text-accent-violet bg-dark-600/50'
+                  : 'text-dark-200 hover:text-white hover:bg-dark-600/50'
+              }`}
+              title="Notifications"
+            >
+              <Bell className="w-5 h-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold text-white bg-accent-rose rounded-full ring-2 ring-dark-900">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </button>
+            <Notifications isOpen={showNotifs} onClose={handleCloseNotifs} />
+          </div>
+
           <Link
             to={`/profile/${user?._id}`}
             className="p-2.5 rounded-xl text-dark-200 hover:text-white hover:bg-dark-600/50 transition-all"
