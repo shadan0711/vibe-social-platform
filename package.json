@@ -3,9 +3,8 @@
   "version": "1.0.0",
   "description": "Vibe - A modern social media platform",
   "scripts": {
-    "install-all": "cd backend && npm install && cd ../frontend && npm install",
+    "install-all": "cd backend && npm install && cd ../frontend && npm install --include=dev",
     "build": "cd frontend && npm run build",
-    "start": "cd backend && node server.js",
-    "dev": "cd backend && npm run dev"
+    "start": "cd backend && node server.js"
   }
 }
